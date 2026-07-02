@@ -1,0 +1,19 @@
+{
+  "name": "ひみつ文書｜つくる手帖",
+  "short_name": "ひみつ文書",
+  "description": "LINEで送る文章を二人だけの合言葉で暗号化・復号する道具。処理はすべて端末内で完結します。",
+  "lang": "ja",
+  "dir": "ltr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#faf7ef",
+  "theme_color": "#faf7ef",
+  "categories": ["utilities", "productivity"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

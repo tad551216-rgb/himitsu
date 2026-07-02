@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="description" content="LINEで送る文章を二人だけの合言葉で暗号化・復号するツール。すべて端末内で処理し、外部への送信は一切ありません。">
+<meta name="theme-color" content="#faf7ef">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="favicon-16.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="ひみつ文書">
+<title>ひみつ文書 — 合言葉で暗号化</title>
+<style>
+:root{
+  --cream:#faf7ef;
+  --grid:rgba(43,58,102,.07);
+  --indigo:#2b3a66;
+  --indigo-deep:#1d2947;
+  --vermillion:#d4472e;
+  --paper:#ffffff;
+  --line:#d8d2c2;
+  --ok:#2e7d4f;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Hiragino Sans","Hiragino Kaku Gothic ProN","Yu Gothic",Meiryo,sans-serif;
+  background-color:var(--cream);
+  background-image:
+    linear-gradient(var(--grid) 1px,transparent 1px),
+    linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;
+  color:var(--indigo-deep);
+  min-height:100vh;
+  padding:16px 16px calc(24px + env(safe-area-inset-bottom));
+  line-height:1.7;
+}
+.wrap{max-width:560px;margin:0 auto}
+header{margin:8px 0 20px}
+h1{
+  font-size:22px;font-weight:700;color:var(--indigo);
+  display:flex;align-items:center;gap:8px;letter-spacing:.04em;
+}
+h1 .mark{
+  display:inline-block;width:26px;height:26px;border:2px solid var(--vermillion);
+  border-radius:50%;position:relative;flex:none;
+}
+h1 .mark::after{
+  content:"";position:absolute;inset:6px;background:var(--vermillion);border-radius:50%;
+}
+.sub{font-size:12.5px;color:#6b7280;margin-top:4px}
+
+/* tabs */
+.tabs{display:flex;gap:0;margin-bottom:-1px;position:relative;z-index:1}
+.tab{
+  flex:1;padding:11px 8px;text-align:center;font-size:15px;font-weight:600;
+  background:transparent;border:1px solid transparent;border-bottom:none;
+  border-radius:10px 10px 0 0;color:#8a8674;cursor:pointer;
+  font-family:inherit;
+}
+.tab[aria-selected="true"]{
+  background:var(--paper);border-color:var(--line);color:var(--indigo);
+}
+.tab:focus-visible{outline:2px solid var(--vermillion);outline-offset:-2px}
+
+.card{
+  background:var(--paper);border:1px solid var(--line);border-radius:0 0 12px 12px;
+  padding:18px 16px 20px;box-shadow:0 2px 10px rgba(43,58,102,.06);
+}
+.field{margin-bottom:16px}
+label{display:block;font-size:13px;font-weight:600;color:var(--indigo);margin-bottom:6px;letter-spacing:.03em}
+label .note{font-weight:400;color:#8a8674;font-size:12px;margin-left:6px}
+input[type=password],input[type=text],textarea{
+  width:100%;font:inherit;font-size:16px;color:var(--indigo-deep);
+  background:#fffdf8;border:1.5px solid var(--line);border-radius:8px;
+  padding:10px 12px;
+}
+input:focus,textarea:focus{outline:none;border-color:var(--indigo)}
+textarea{min-height:110px;resize:vertical;line-height:1.6}
+.pass-row{display:flex;gap:8px}
+.pass-row input{flex:1}
+.eye{
+  flex:none;width:46px;border:1.5px solid var(--line);border-radius:8px;
+  background:#fffdf8;font-size:17px;cursor:pointer;
+}
+.eye:focus-visible{outline:2px solid var(--vermillion)}
+
+.btn{
+  display:block;width:100%;padding:13px;font:inherit;font-size:16px;font-weight:700;
+  color:#fff;background:var(--indigo);border:none;border-radius:10px;cursor:pointer;
+  letter-spacing:.06em;transition:transform .06s;
+}
+.btn:active{transform:scale(.985)}
+.btn:focus-visible{outline:3px solid var(--vermillion);outline-offset:2px}
+.btn.decrypt{background:var(--vermillion)}
+
+.result{margin-top:16px;display:none}
+.result.show{display:block}
+.result-label{font-size:13px;font-weight:600;color:var(--indigo);margin-bottom:6px}
+.result-box{
+  background:#fffdf8;border:1.5px dashed var(--indigo);border-radius:8px;
+  padding:12px;font-size:14px;word-break:break-all;white-space:pre-wrap;
+  max-height:220px;overflow:auto;line-height:1.6;
+}
+.result-box.plain{border-color:var(--ok);border-style:solid}
+.copy-btn{
+  margin-top:8px;width:100%;padding:11px;font:inherit;font-size:14.5px;font-weight:600;
+  color:var(--indigo);background:#fff;border:1.5px solid var(--indigo);border-radius:8px;cursor:pointer;
+}
+.copy-btn:focus-visible{outline:2px solid var(--vermillion)}
+.copy-btn.copied{background:var(--ok);border-color:var(--ok);color:#fff}
+
+.msg{margin-top:12px;font-size:13.5px;padding:10px 12px;border-radius:8px;display:none}
+.msg.show{display:block}
+.msg.err{background:#fdecea;color:#a33025;border:1px solid #eec2ba}
+
+.howto{
+  margin-top:22px;background:rgba(255,255,255,.65);border:1px solid var(--line);
+  border-radius:12px;padding:16px;font-size:13.5px;color:#4b5563;
+}
+.howto h2{font-size:14px;color:var(--indigo);margin-bottom:8px;letter-spacing:.05em}
+.howto ol{padding-left:1.4em}
+.howto li{margin-bottom:6px}
+.howto .safe{
+  margin-top:10px;padding-top:10px;border-top:1px dashed var(--line);
+  font-size:12.5px;color:#6b7280;
+}
+footer{margin-top:20px;text-align:center;font-size:11.5px;color:#a09a88}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="mark" aria-hidden="true"></span>ひみつ文書</h1>
+    <p class="sub">合言葉を知る人だけが読める文章に変換します。処理はすべてこの端末内で完結し、どこにも送信されません。</p>
+  </header>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" id="tab-enc" role="tab" aria-selected="true" aria-controls="panel-enc">暗号化する</button>
+    <button class="tab" id="tab-dec" role="tab" aria-selected="false" aria-controls="panel-dec">復号する</button>
+  </div>
+
+  <!-- 暗号化 -->
+  <div class="card" id="panel-enc" role="tabpanel" aria-labelledby="tab-enc">
+    <div class="field">
+      <label for="enc-pass">合言葉<span class="note">相手と事前に共有したもの</span></label>
+      <div class="pass-row">
+        <input type="password" id="enc-pass" autocomplete="off" placeholder="例:はちみつ2026">
+        <button class="eye" type="button" aria-label="合言葉を表示" data-target="enc-pass">👁</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="enc-text">送りたい文章</label>
+      <textarea id="enc-text" placeholder="ここに本文を入力"></textarea>
+    </div>
+    <button class="btn" id="btn-enc">暗号文をつくる</button>
+    <div class="msg err" id="enc-err"></div>
+    <div class="result" id="enc-result">
+      <p class="result-label">暗号文(これをLINEに貼り付けて送信)</p>
+      <div class="result-box" id="enc-out"></div>
+      <button class="copy-btn" id="enc-copy">コピーする</button>
+    </div>
+  </div>
+
+  <!-- 復号 -->
+  <div class="card" id="panel-dec" role="tabpanel" aria-labelledby="tab-dec" hidden>
+    <div class="field">
+      <label for="dec-pass">合言葉</label>
+      <div class="pass-row">
+        <input type="password" id="dec-pass" autocomplete="off" placeholder="送信者と同じ合言葉">
+        <button class="eye" type="button" aria-label="合言葉を表示" data-target="dec-pass">👁</button>
+      </div>
+    </div>
+    <div class="field">
+      <label for="dec-text">届いた暗号文</label>
+      <textarea id="dec-text" placeholder="LINEからコピーした暗号文を貼り付け"></textarea>
+    </div>
+    <button class="btn decrypt" id="btn-dec">文章にもどす</button>
+    <div class="msg err" id="dec-err"></div>
+    <div class="result" id="dec-result">
+      <p class="result-label">復号された文章</p>
+      <div class="result-box plain" id="dec-out"></div>
+      <button class="copy-btn" id="dec-copy">コピーする</button>
+    </div>
+  </div>
+
+  <div class="howto">
+    <h2>つかいかた</h2>
+    <ol>
+      <li>相手と<strong>合言葉</strong>を決めます(LINE以外の方法、できれば口頭で)。</li>
+      <li>送る人:本文と合言葉を入れて「暗号文をつくる」→ コピーしてLINEで送信。</li>
+      <li>受け取る人:暗号文をコピーしてこのページに貼り、同じ合言葉で「文章にもどす」。</li>
+    </ol>
+    <p class="safe">暗号方式:AES-GCM 256bit(鍵はPBKDF2-SHA256・31万回で導出)。合言葉はどこにも保存されません。長く推測されにくい合言葉ほど安全です。</p>
+  </div>
+
+  <footer>つくる手帖 — ひみつ文書</footer>
+</div>
+
+<script>
+(() => {
+  const PREFIX = "🔒himitsu1:";
+  const enc = new TextEncoder();
+  const dec = new TextDecoder();
+
+  // ---- crypto ----
+  async function deriveKey(pass, salt){
+    const base = await crypto.subtle.importKey("raw", enc.encode(pass), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey(
+      {name:"PBKDF2", salt, iterations:310000, hash:"SHA-256"},
+      base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]
+    );
+  }
+  function b64(buf){
+    let s=""; const b=new Uint8Array(buf);
+    for(let i=0;i<b.length;i++) s+=String.fromCharCode(b[i]);
+    return btoa(s);
+  }
+  function unb64(str){
+    const s=atob(str); const b=new Uint8Array(s.length);
+    for(let i=0;i<s.length;i++) b[i]=s.charCodeAt(i);
+    return b;
+  }
+  async function encrypt(pass, text){
+    const salt = crypto.getRandomValues(new Uint8Array(16));
+    const iv   = crypto.getRandomValues(new Uint8Array(12));
+    const key  = await deriveKey(pass, salt);
+    const ct   = await crypto.subtle.encrypt({name:"AES-GCM", iv}, key, enc.encode(text));
+    const out  = new Uint8Array(16+12+ct.byteLength);
+    out.set(salt,0); out.set(iv,16); out.set(new Uint8Array(ct),28);
+    return PREFIX + b64(out.buffer);
+  }
+  async function decrypt(pass, payload){
+    let body = payload.trim();
+    if(body.startsWith(PREFIX)) body = body.slice(PREFIX.length);
+    body = body.replace(/\s+/g,"");
+    const raw  = unb64(body);
+    if(raw.length < 29) throw new Error("short");
+    const salt = raw.slice(0,16), iv = raw.slice(16,28), ct = raw.slice(28);
+    const key  = await deriveKey(pass, salt);
+    const pt   = await crypto.subtle.decrypt({name:"AES-GCM", iv}, key, ct);
+    return dec.decode(pt);
+  }
+
+  // ---- UI ----
+  const $ = id => document.getElementById(id);
+  const tabs = [$("tab-enc"), $("tab-dec")];
+  const panels = [$("panel-enc"), $("panel-dec")];
+  tabs.forEach((t,i)=>t.addEventListener("click",()=>{
+    tabs.forEach((x,j)=>{x.setAttribute("aria-selected", i===j); panels[j].hidden = i!==j;});
+  }));
+
+  document.querySelectorAll(".eye").forEach(btn=>{
+    btn.addEventListener("click",()=>{
+      const inp = $(btn.dataset.target);
+      inp.type = inp.type === "password" ? "text" : "password";
+      btn.setAttribute("aria-label", inp.type==="password" ? "合言葉を表示" : "合言葉を隠す");
+    });
+  });
+
+  function showErr(el,msg){el.textContent=msg; el.classList.add("show");}
+  function hideErr(el){el.classList.remove("show");}
+
+  $("btn-enc").addEventListener("click", async ()=>{
+    hideErr($("enc-err")); $("enc-result").classList.remove("show");
+    const pass = $("enc-pass").value, text = $("enc-text").value;
+    if(!pass){showErr($("enc-err"),"合言葉を入力してください。");return;}
+    if(!text){showErr($("enc-err"),"送りたい文章を入力してください。");return;}
+    try{
+      $("enc-out").textContent = await encrypt(pass, text);
+      $("enc-result").classList.add("show");
+    }catch(e){showErr($("enc-err"),"暗号化に失敗しました。ブラウザを最新にしてお試しください。");}
+  });
+
+  $("btn-dec").addEventListener("click", async ()=>{
+    hideErr($("dec-err")); $("dec-result").classList.remove("show");
+    const pass = $("dec-pass").value, text = $("dec-text").value;
+    if(!pass){showErr($("dec-err"),"合言葉を入力してください。");return;}
+    if(!text){showErr($("dec-err"),"暗号文を貼り付けてください。");return;}
+    try{
+      $("dec-out").textContent = await decrypt(pass, text);
+      $("dec-result").classList.add("show");
+    }catch(e){
+      showErr($("dec-err"),"復号できませんでした。合言葉が違うか、暗号文が欠けている可能性があります。暗号文は🔒から最後まで丸ごとコピーしてください。");
+    }
+  });
+
+  function bindCopy(btnId, srcId){
+    $(btnId).addEventListener("click", async ()=>{
+      try{
+        await navigator.clipboard.writeText($(srcId).textContent);
+        const b=$(btnId); b.textContent="コピーしました ✓"; b.classList.add("copied");
+        setTimeout(()=>{b.textContent="コピーする"; b.classList.remove("copied");},1800);
+      }catch(e){
+        // フォールバック:選択状態にする
+        const range=document.createRange(); range.selectNodeContents($(srcId));
+        const sel=getSelection(); sel.removeAllRanges(); sel.addRange(range);
+      }
+    });
+  }
+  bindCopy("enc-copy","enc-out");
+  bindCopy("dec-copy","dec-out");
+})();
+</script>
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("./sw.js").catch(()=>{});
+  });
+}
+</script>
+</body>
+</html>
