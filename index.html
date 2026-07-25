@@ -79,6 +79,8 @@ input[type=password],input[type=text],textarea{
   padding:10px 12px;
 }
 input:focus,textarea:focus{outline:none;border-color:var(--indigo)}
+input.masked{-webkit-text-security:disc;}
+input.masked.revealed{-webkit-text-security:none;}
 textarea{min-height:110px;resize:vertical;line-height:1.6}
 .pass-row{display:flex;gap:8px}
 .pass-row input{flex:1}
@@ -148,7 +150,7 @@ footer{margin-top:20px;text-align:center;font-size:11.5px;color:#a09a88}
     <div class="field">
       <label for="enc-pass">合言葉<span class="note">相手と事前に共有したもの</span></label>
       <div class="pass-row">
-        <input type="password" id="enc-pass" autocomplete="off" placeholder="例:はちみつ2026">
+        <input type="password" id="enc-pass" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="例:はちみつ2026">
         <button class="eye" type="button" aria-label="合言葉を表示" data-target="enc-pass">👁</button>
       </div>
     </div>
@@ -170,7 +172,7 @@ footer{margin-top:20px;text-align:center;font-size:11.5px;color:#a09a88}
     <div class="field">
       <label for="dec-pass">合言葉</label>
       <div class="pass-row">
-        <input type="password" id="dec-pass" autocomplete="off" placeholder="送信者と同じ合言葉">
+        <input type="password" id="dec-pass" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="送信者と同じ合言葉">
         <button class="eye" type="button" aria-label="合言葉を表示" data-target="dec-pass">👁</button>
       </div>
     </div>
@@ -194,7 +196,7 @@ footer{margin-top:20px;text-align:center;font-size:11.5px;color:#a09a88}
       <li>送る人:本文と合言葉を入れて「暗号文をつくる」→ コピーしてLINEで送信。</li>
       <li>受け取る人:暗号文をコピーしてこのページに貼り、同じ合言葉で「文章にもどす」。</li>
     </ol>
-    <p class="safe">暗号方式:AES-GCM 256bit(鍵はPBKDF2-SHA256・31万回で導出)。合言葉はどこにも保存されません。長く推測されにくい合言葉ほど安全です。</p>
+    <p class="safe">暗号方式:AES-GCM 256bit(鍵はPBKDF2-SHA256・31万回で導出)。合言葉はどこにも保存されません。長く推測されにくい合言葉ほど安全です。合言葉には日本語も使えます。</p>
   </div>
 
   <footer>つくる手帖 — ひみつ文書</footer>
@@ -208,7 +210,7 @@ footer{margin-top:20px;text-align:center;font-size:11.5px;color:#a09a88}
 
   // ---- crypto ----
   async function deriveKey(pass, salt){
-    const base = await crypto.subtle.importKey("raw", enc.encode(pass), "PBKDF2", false, ["deriveKey"]);
+    const base = await crypto.subtle.importKey("raw", enc.encode(pass.normalize("NFC")), "PBKDF2", false, ["deriveKey"]);
     return crypto.subtle.deriveKey(
       {name:"PBKDF2", salt, iterations:310000, hash:"SHA-256"},
       base, {name:"AES-GCM", length:256}, false, ["encrypt","decrypt"]
@@ -253,11 +255,27 @@ footer{margin-top:20px;text-align:center;font-size:11.5px;color:#a09a88}
     tabs.forEach((x,j)=>{x.setAttribute("aria-selected", i===j); panels[j].hidden = i!==j;});
   }));
 
+  // 伏せ字CSSに対応したブラウザ(iPhone/Android/Chrome等)では、
+  // 合言葉欄を通常のテキスト欄+CSS伏せ字に切り替える。
+  // これによりパスワード欄では出ない日本語キーボード(IME)が使える。
+  const maskOK = window.CSS && CSS.supports && CSS.supports("-webkit-text-security","disc");
+  if(maskOK){
+    ["enc-pass","dec-pass"].forEach(id=>{
+      const inp=$(id); inp.type="text"; inp.classList.add("masked");
+    });
+  }
   document.querySelectorAll(".eye").forEach(btn=>{
     btn.addEventListener("click",()=>{
       const inp = $(btn.dataset.target);
-      inp.type = inp.type === "password" ? "text" : "password";
-      btn.setAttribute("aria-label", inp.type==="password" ? "合言葉を表示" : "合言葉を隠す");
+      let hidden;
+      if(maskOK){
+        inp.classList.toggle("revealed");
+        hidden = !inp.classList.contains("revealed");
+      }else{
+        inp.type = inp.type === "password" ? "text" : "password";
+        hidden = inp.type === "password";
+      }
+      btn.setAttribute("aria-label", hidden ? "合言葉を表示" : "合言葉を隠す");
     });
   });
 
